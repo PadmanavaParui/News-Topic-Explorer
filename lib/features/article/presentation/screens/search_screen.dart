@@ -5,6 +5,9 @@ import '../../data/article_model.dart';
 //importing the repository to handle API connection
 import '../../data/article_repository.dart';
 
+//importing articlescreen.dart to navigate to the article screen
+import 'articlescreen.dart';
+
 
 //using stateful widget
 // as screen updates and rebuilds when user searches and new data arrives
@@ -21,7 +24,7 @@ class _SearchScreenState extends State<SearchScreen> {
   // 1. FORM & CONTROLLERS
   //controllers and keys
   //global key is essential for form validation
-  //allows us to chekc if the text field contains valid data
+  //allows us to check if the text field contains valid data
   final _formKey = GlobalKey<FormState>(); // For Validation
   final _searchController = TextEditingController(); // For Input Text
 
@@ -126,6 +129,18 @@ class _SearchScreenState extends State<SearchScreen> {
                     elevation: 2,
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(10),
+
+
+                      //navigating to the ArticleScreen
+                      onTap:(){
+                        //on tapping we will navigate to the ArticleScreen, passing the specific article model
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context)=>ArticleScreen(article: article),)
+                        );
+                      },
+
+
                       leading: article.urlToImage != null
                           ? Image.network(
                         article.urlToImage!,

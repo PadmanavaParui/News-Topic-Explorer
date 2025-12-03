@@ -5,6 +5,7 @@ class ArticleModel {
   final String? author;
   final String? publishedAt;
   final String? content;
+  final String? url;
 
   ArticleModel({
     required this.title,
@@ -13,6 +14,7 @@ class ArticleModel {
     this.author,
     this.publishedAt,
     this.content,
+    this.url,
   });
 
   // Factory constructor to create an Article from JSON data
@@ -32,6 +34,9 @@ class ArticleModel {
       publishedAt: json['publishedAt'],
 
       content: json['content'],
+
+      //mapping the json url to our model field
+      url: json['url']
     );
   }
 }

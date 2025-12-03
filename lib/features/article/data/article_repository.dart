@@ -1,7 +1,10 @@
+//importing dio
 import 'package:dio/dio.dart';
+//importing article_model.dart
 import 'article_model.dart';
 
 class ArticleRepository {
+  //my api key
   final String _apiKey = '731a3b7d3a3c4d3a89059f2c1a966043';
 
   // using Dio for easier API calls
@@ -9,10 +12,13 @@ class ArticleRepository {
 
   /// Method 1: Getting Top Headlines (For Home Screen)
   /// Fetching news based on a category like 'technology', 'sports', etc.
+  /// Returns a list of ArticleModels.
+  /// asynchronous function and asynchronous computation cannot provide results immediately when it is started.
   Future<List<ArticleModel>> getTopHeadlines(String category) async {
     const String url = 'https://newsapi.org/v2/top-headlines';
 
     try {
+      //dynamic response
       final response = await _dio.get(
         url,
         queryParameters: {
@@ -22,9 +28,10 @@ class ArticleRepository {
         },
       );
 
+      // _parseResponse - helper method to parse the raw JSON
       return _parseResponse(response);
     } catch (e) {
-      // If error, print it to console and return empty list to prevent crash
+      // If there is error, printing it to console and returning empty list to prevent crash
       print("Error fetching headlines: $e");
       return [];
     }
