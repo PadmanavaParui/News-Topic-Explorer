@@ -26,9 +26,12 @@ class ArticleModel {
       description: json['description'],
 
       // NewsAPI sometimes sends broken image URLs, so we keep it nullable
-      urlToImage: json['urlToImage'],
+      // GNews uses 'image' instead of 'urlToImage'
+      urlToImage: json['image'] ?? json['urlToImage'],
 
-      author: json['author'] ?? "Unknown Source",
+      // GNews source is an object {name: '...'}, NewsAPI is string or object
+      // We handle both or just fallback
+      author: json['source'] is Map ? json['source']['name'] : (json['author'] ?? "Unknown Source"),
 
       // Date formatting can be done in the UI later
       publishedAt: json['publishedAt'],

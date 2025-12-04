@@ -5,7 +5,7 @@ import 'article_model.dart';
 
 class ArticleRepository {
   //my api key
-  final String _apiKey = '731a3b7d3a3c4d3a89059f2c1a966043';
+  final String _apiKey = 'f9a7c9e5747bd767cdc2c259234dd7f6';
 
   // using Dio for easier API calls
   final Dio _dio = Dio();
@@ -15,7 +15,7 @@ class ArticleRepository {
   /// Returns a list of ArticleModels.
   /// asynchronous function and asynchronous computation cannot provide results immediately when it is started.
   Future<List<ArticleModel>> getTopHeadlines(String category) async {
-    const String url = 'https://newsapi.org/v2/top-headlines';
+    const String url = 'https://gnews.io/api/v4/top-headlines';
 
     try {
       //dynamic response
@@ -24,7 +24,8 @@ class ArticleRepository {
         queryParameters: {
           'country': 'us',       // Fetching US news
           'category': category,  // e.g. 'technology'
-          'apiKey': _apiKey,
+          'apikey': _apiKey,
+          'lang': 'en',
         },
       );
 
@@ -40,16 +41,16 @@ class ArticleRepository {
   /// Method 2: Searching Articles (For Search Screen)
   /// Fetching news based on a specific keyword query.
   Future<List<ArticleModel>> searchArticles(String query) async {
-    const String url = 'https://newsapi.org/v2/everything';
+    const String url = 'https://gnews.io/api/v4/search';
 
     try {
       final response = await _dio.get(
         url,
         queryParameters: {
           'q': query,            // The user's search text
-          'apiKey': _apiKey,
-          'sortBy': 'publishedAt', // Newest first
-          'language': 'en',      // English results only
+          'apikey': _apiKey,
+          'lang': 'en',      // English results only
+          'sortby': 'publishedAt',
         },
       );
 
