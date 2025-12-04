@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 // IMPORTS FOR DATA AND SCREENS
 import '../../../article/data/article_model.dart';
 import '../../../article/data/article_repository.dart';
+import '../../../article/presentation/bloc/article_bloc.dart';
 import '../../../article/presentation/screens/articlescreen.dart';
 import '../../../article/presentation/screens/search_screen.dart';
 
@@ -191,53 +193,40 @@ class NewsFeedPage extends StatelessWidget {
 }
 
 // Helper Widget for the Feed List (UPDATED to Fetch Data)
-class NewsList extends StatefulWidget {
+class NewsList extends StatelessWidget {
   final String category;
   const NewsList({super.key, required this.category});
 
   @override
-  State<NewsList> createState() => _NewsListState();
-}
-
-class _NewsListState extends State<NewsList> {
-  late Future<List<ArticleModel>> _articlesFuture;
-  final ArticleRepository _repository = ArticleRepository();
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize the API call
-    _articlesFuture = _repository.getTopHeadlines(widget.category);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<ArticleModel>>(
-      future: _articlesFuture,
-      builder: (context, snapshot) {
-        // 1. Loading State
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        // 2. Error State
-        if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
-        // 3. Empty State
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text("No articles found."));
-        }
-
-        // 4. Success State
-        final articles = snapshot.data!;
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: articles.length,
-          itemBuilder: (context, index) {
-            return NewsCard(article: articles[index]);
-          },
-        );
-      },
+    return BlocProvider(
+      create: (context) => ArticleBloc(ArticleRepository())..add(FetchHeadlines(category)),
+      child: BlocBuilder<ArticleBloc, ArticleState>(
+        builder: (context, state) {
+          // 1. Loading State
+          if (state is ArticleLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          // 2. Error State
+          if (state is ArticleError) {
+            return Center(child: Text("Error: ${state.message}"));
+          }
+          // 3. Success State
+          if (state is ArticleLoaded) {
+            if (state.articles.isEmpty) {
+              return const Center(child: Text("No articles found."));
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: state.articles.length,
+              itemBuilder: (context, index) {
+                return NewsCard(article: state.articles[index]);
+              },
+            );
+          }
+          return const SizedBox.shrink();
+        },
+      ),
     );
   }
 }
