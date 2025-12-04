@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+// IMPORTS FOR DATA AND SCREENS
+import '../../../article/data/article_model.dart';
+import '../../../article/data/article_repository.dart';
+import '../../../article/presentation/screens/articlescreen.dart';
 import '../../../article/presentation/screens/search_screen.dart';
+
+import 'explore_view.dart';
 
 
 // THE MAIN CONTAINER (Stateful because it tracks which tab is open)
@@ -58,6 +64,19 @@ class TopicGridPage extends StatelessWidget {
     'Science', 'Entertainment', 'General'
   ];
 
+  // Helper to get icons for topics
+  IconData _getIconForTopic(String topic) {
+    switch (topic) {
+      case 'Technology': return Icons.computer;
+      case 'Business': return Icons.work;
+      case 'Sports': return Icons.sports_soccer;
+      case 'Health': return Icons.local_hospital;
+      case 'Science': return Icons.science;
+      case 'Entertainment': return Icons.movie;
+      default: return Icons.article;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,14 +99,30 @@ class TopicGridPage extends StatelessWidget {
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: InkWell(
+                borderRadius: BorderRadius.circular(12),
                 onTap: () {
-                  //navigation logic for later
+                  // --- NAVIGATE TO EXPLORE VIEW ---
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ExploreView(topic: topics[index]),
+                    ),
+                  );
                 },
-                child: Center(
-                  child: Text(
-                    topics[index],
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _getIconForTopic(topics[index]),
+                      size: 40,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      topics[index],
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -99,25 +134,28 @@ class TopicGridPage extends StatelessWidget {
 }
 
 
-// SCREEN 2: THE NEWS FEED
 
+// SCREEN 2: THE NEWS FEED
 class NewsFeedPage extends StatelessWidget {
   const NewsFeedPage({super.key});
 
-  final List<String> categories = const [
-    "All", "Tech", "Sports", "Biz", "Health", "Science"
+  // UPDATED: Map display names to API category keys
+  final List<Map<String, String>> categories = const [
+    {"display": "All", "api": "general"},
+    {"display": "Tech", "api": "technology"},
+    {"display": "Sports", "api": "sports"},
+    {"display": "Biz", "api": "business"},
+    {"display": "Health", "api": "health"},
+    {"display": "Science", "api": "science"},
   ];
 
   @override
   Widget build(BuildContext context) {
-    // Requires DefaultTabController for the horizontal tabs
     return DefaultTabController(
       length: categories.length,
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Daily News"),
-
-          //search
           actions: [
             IconButton(
               icon: const Icon(Icons.search),
@@ -129,38 +167,86 @@ class NewsFeedPage extends StatelessWidget {
               },
             ),
           ],
-
-
           bottom: TabBar(
             isScrollable: true,
-            tabs: categories.map((name) => Tab(text: name)).toList(),
+            labelStyle: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 24.0),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.normal,
+            ),
+            tabs: categories.map((cat) => Tab(text: cat['display'])).toList(),
           ),
         ),
         body: TabBarView(
-          children: categories.map((category) => const NewsList()).toList(),
+          // Pass the API category key to the NewsList
+          children: categories.map((cat) => NewsList(category: cat['api']!)).toList(),
         ),
       ),
     );
   }
 }
 
-// Helper Widget for the Feed List
-class NewsList extends StatelessWidget {
-  const NewsList({super.key});
+// Helper Widget for the Feed List (UPDATED to Fetch Data)
+class NewsList extends StatefulWidget {
+  final String category;
+  const NewsList({super.key, required this.category});
+
+  @override
+  State<NewsList> createState() => _NewsListState();
+}
+
+class _NewsListState extends State<NewsList> {
+  late Future<List<ArticleModel>> _articlesFuture;
+  final ArticleRepository _repository = ArticleRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the API call
+    _articlesFuture = _repository.getTopHeadlines(widget.category);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: 10,
-      itemBuilder: (context, index) => const NewsCard(),
+    return FutureBuilder<List<ArticleModel>>(
+      future: _articlesFuture,
+      builder: (context, snapshot) {
+        // 1. Loading State
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        // 2. Error State
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+        // 3. Empty State
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text("No articles found."));
+        }
+
+        // 4. Success State
+        final articles = snapshot.data!;
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: articles.length,
+          itemBuilder: (context, index) {
+            return NewsCard(article: articles[index]);
+          },
+        );
+      },
     );
   }
 }
 
-// Helper Widget for the Individual Card
+// Helper Widget for the Individual Card (UPDATED to use ArticleModel)
 class NewsCard extends StatelessWidget {
-  const NewsCard({super.key});
+  final ArticleModel article;
+
+  const NewsCard({super.key, required this.article});
 
   @override
   Widget build(BuildContext context) {
@@ -168,29 +254,73 @@ class NewsCard extends StatelessWidget {
       elevation: 4,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 150,
-            decoration: const BoxDecoration(
-              color: Colors.grey,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // Navigate to ArticleScreen with the real article data
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ArticleScreen(article: article),
             ),
-            child: const Center(child: Icon(Icons.image, size: 50, color: Colors.white)),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("SpaceX Launches Starship", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text("By Elon Musk • 2 hours ago", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-              ],
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // IMAGE SECTION
+            Container(
+              height: 180,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                color: Colors.grey,
+              ),
+              child: article.urlToImage != null && article.urlToImage!.isNotEmpty
+                  ? ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.network(
+                  article.urlToImage!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(child: Icon(Icons.broken_image, size: 50, color: Colors.white));
+                  },
+                ),
+              )
+                  : const Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.white)),
             ),
-          ),
-        ],
+
+            // TEXT SECTION
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    article.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          article.author ?? "Unknown Source",
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
