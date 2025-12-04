@@ -1,61 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../article/data/article_model.dart';
 import '../../../article/data/article_repository.dart';
+import '../../../article/presentation/bloc/article_bloc.dart';
 import '../../../article/presentation/screens/articlescreen.dart';
 
-class ExploreView extends StatefulWidget {
-  final String topic;  const ExploreView({super.key, required this.topic});
+class ExploreView extends StatelessWidget {
+  final String topic;
 
-  @override
-  State<ExploreView> createState() => _ExploreViewState();
-}
-
-class _ExploreViewState extends State<ExploreView> {
-  late Future<List<ArticleModel>> _articlesFuture;
-  final ArticleRepository _repository = ArticleRepository();
-
-  @override
-  void initState() {
-    super.initState();
-    // Fetch articles based on the topic passed (e.g., 'Technology')
-    // We convert the topic to lowercase to match the API requirements if needed,
-    // though NewsList logic handles simple strings well.
-    _articlesFuture = _repository.getTopHeadlines(widget.topic.toLowerCase());
-  }
+  const ExploreView({super.key, required this.topic});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("${widget.topic} News"),
-      ),
-      body: FutureBuilder<List<ArticleModel>>(
-        future: _articlesFuture,
-        builder: (context, snapshot) {
-          // 1. Loading State
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          // 2. Error State
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-          // 3. Empty State
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("No articles found for this topic."));
-          }
-
-          // 4. Success State
-          final articles = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: articles.length,
-            itemBuilder: (context, index) {
-              final article = articles[index];
-              return _ExploreNewsCard(article: article);
-            },
-          );
-        },
+    return BlocProvider(
+      create: (context) => ArticleBloc(ArticleRepository())..add(FetchHeadlines(topic.toLowerCase())),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text("$topic News"),
+        ),
+        body: BlocBuilder<ArticleBloc, ArticleState>(
+          builder: (context, state) {
+            if (state is ArticleLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is ArticleError) {
+              return Center(child: Text("Error: ${state.message}"));
+            } else if (state is ArticleLoaded) {
+              if (state.articles.isEmpty) {
+                return const Center(child: Text("No articles found for this topic."));
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: state.articles.length,
+                itemBuilder: (context, index) {
+                  final article = state.articles[index];
+                  return _ExploreNewsCard(article: article);
+                },
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
